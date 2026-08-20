@@ -1,0 +1,139 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+int main()
+{
+    int fd[2];
+    int num, temp;
+
+    pipe(fd);
+
+    if (fork() == 0)
+    {
+        // Child Process
+        printf("Child Process\n");
+        printf("Enter a number: ");
+        scanf("%d", &num);
+
+        write(fd[1], &num, sizeof(num));
+    }
+    else
+    {
+        // Parent Process
+        wait(NULL);
+
+        read(fd[0], &num, sizeof(num));
+
+        temp = num;
+
+        while (temp > 1)
+        {
+            if (temp % 3 != 0)
+                break;
+
+            temp = temp / 3;
+        }
+
+        if (temp == 1)
+            printf("Parent: %d is a Power of 3.\n", num);
+        else
+            printf("Parent: %d is NOT a Power of 3.\n", num);
+    }
+
+    return 0;
+}
+[24bcs186@mepcolinux ex2]$./p1
+Child Process
+Enter a number: 81
+Parent: 81 is a Power of 3.
+[24bcs186@mepcolinux ex2]$./p1
+Child Process
+Enter a number: 32
+Parent: 32 is NOT a Power of 3.
+[24bcs186@mepcolinux ex2]$cat p2.c
+#include <stdio.h>
+#include <unistd.h>
+#include <string.h>
+#include <ctype.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+int main()
+{
+    int pipe1[2], pipe2[2];
+    char str[100];
+    char status[200];
+    int i;
+
+    pipe(pipe1);
+    pipe(pipe2);
+
+    if (fork() == 0)
+    {
+        int number = 0;
+        int special = 0;
+
+        read(pipe1[0], str, sizeof(str));
+
+        for (i = 0; str[i] != '\0'; i++)
+        {
+            if (isdigit(str[i]))
+                number = 1;
+
+            if (!isalnum(str[i]))
+                special = 1;
+        }
+
+        strcpy(status, "");
+
+        if (strlen(str) > 7 && number == 1 && special == 1)
+        {
+            strcpy(status, "\nVALID: The entered string satisfies all  conditions.\n");
+        }
+        else
+        {
+            strcpy(status, "\nINVALID:");
+
+	    printf("\n");
+
+            if (strlen(str) <= 7)
+                strcat(status, "\n- Length should be greater than 7.\n");
+
+            if (number == 0)
+                strcat(status, "\n- At least one number is required.\n");
+
+            if (special == 0)
+                strcat(status, "\n- At least one special character is required.\n");
+
+	    printf("\n");
+        }
+
+        write(pipe2[1], status, sizeof(status));
+    }
+    else
+    {
+        printf("PARENT PROCESS\n");
+        printf("Enter a string: ");
+        scanf("%s", str);
+
+        write(pipe1[1], str, sizeof(str));
+
+        wait(NULL);
+
+        read(pipe2[0], status, sizeof(status));
+
+        printf("\nResult received from Child Process:\n");
+        printf("%s\n", status);
+    }
+
+    return 0;
+}
+[24bcs186@mepcolinux ex2]$./p2
+PARENT PROCESS
+Enter a string: @123hello
+
+Result received from Child Process:
+
+VALID: The entered string satisfies all the conditions.
